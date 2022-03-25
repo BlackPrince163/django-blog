@@ -7,8 +7,8 @@ from django.shortcuts import render, get_object_or_404
 from django.views import View
 from taggit.models import Tag
 
-from myblog.forms import SignUpForm, SignInForm, FeedBackForm
-from myblog.models import Post
+from myblog.forms import SignUpForm, SignInForm, FeedBackForm, CommentForm
+from myblog.models import Post, Comment
 
 
 def main_view(request):
@@ -31,11 +31,25 @@ class PostDetailView(View):
         post = get_object_or_404(Post, url=slug)
         common_tags = Post.tag.most_common()
         last_posts = Post.objects.all().order_by('-id')[:5]
+        comment_form = CommentForm()
         return render(request, 'myblog/post_detail.html', context={
             'post': post,
             'common_tags': common_tags,
-            'last_posts': last_posts
+            'last_posts': last_posts,
+            'comment_form': comment_form,
     })
+
+    def post(self, request, slug, *args, **kwargs):
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            text = request.POST['text']
+            username = self.request.user
+            post = get_object_or_404(Post, url=slug)
+            comment = Comment.objects.create(post=post, username=username, text=text)
+            return HttpResponseRedirect(request.META.get("HTTP_REFERER", '/'))
+        return render(request, "myblog/post_detail.html", context={
+            "comment_form": comment_form
+        })
 
 
 class SignUpView(View):
